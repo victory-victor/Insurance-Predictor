@@ -1,6 +1,6 @@
-streamlit
-pandas
-scikit-learn
-numpy
 fastapi
 uvicorn
+pandas
+scikit-learn
+pydantic
+python-multipart
