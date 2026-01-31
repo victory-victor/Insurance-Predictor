@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import pickle
 import pandas as pd
@@ -15,45 +16,43 @@ with open("columns.pkl", "rb") as f:
 
 app = FastAPI()
 
-# Define input schema
+# Input schema
 class InsuranceData(BaseModel):
     age: float
     bmi: float
     children: int
-    sex: str       # 'male' or 'female'
-    smoker: str    # 'yes' or 'no'
-    region: str    # 'northwest', 'southeast', 'southwest', 'northeast'
+    sex: str
+    smoker: str
+    region: str
+
+# Load HTML
+with open("index.html", "r", encoding="utf-8") as f:
+    html_content = f.read()
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    return HTMLResponse(content=html_content)
+
 
 @app.post("/predict")
 def predict_insurance(data: InsuranceData):
-    # Convert input to dataframe
     input_dict = data.dict()
-
-    # One-hot encode manually to match training columns
     df = pd.DataFrame(columns=model_columns)
-    df.loc[0] = 0  # Initialize with zeros
+    df.loc[0] = 0
     
     df['age'] = input_dict['age']
     df['bmi'] = input_dict['bmi']
     df['children'] = input_dict['children']
 
-    # Sex
     if input_dict['sex'].lower() == 'male':
         df['sex_male'] = 1
-
-    # Smoker
     if input_dict['smoker'].lower() == 'yes':
         df['smoker_yes'] = 1
-
-    # Region
     region_col = f"region_{input_dict['region'].lower()}"
     if region_col in df.columns:
         df[region_col] = 1
 
-    # Scale numeric features
     df[['age', 'bmi', 'children']] = scaler.transform(df[['age', 'bmi', 'children']])
-
-    # Prediction
     prediction = model.predict(df)[0]
 
     return {"prediction": float(prediction)}
